@@ -95,8 +95,14 @@ typedef struct { BST bst; List work; int k; } RmCtx;
 /* Nome base para arquivos de saida                                     */
 /* ------------------------------------------------------------------ */
 
+/* Extrai apenas o nome do arquivo sem diretorio e sem extensao. */
 static void strip_ext(const char *name, char *out, int out_sz) {
-    strncpy(out, name, (size_t)(out_sz - 1));
+ /* pular componentes de diretorio */
+    const char *slash = strrchr(name, '/');
+    if (!slash) slash = strrchr(name, '\\');
+    const char *base = slash ? slash + 1 : name;
+
+    strncpy(out, base, (size_t)(out_sz - 1));
     out[out_sz - 1] = '\0';
     char *dot = strrchr(out, '.');
     if (dot) *dot = '\0';
