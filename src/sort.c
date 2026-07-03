@@ -3,10 +3,6 @@
 #include <assert.h>
 #include <stdlib.h>
 
-/* ------------------------------------------------------------------ */
-/* Utilitarios                                                          */
-/* ------------------------------------------------------------------ */
-
 SortCrit sort_parse_crit(const char *s) {
     assert(s != NULL);
     if (strcmp(s, "a") == 0) return CRIT_AREA;
@@ -40,7 +36,7 @@ int sort_compare(Shape a, Shape b, SortCrit crit) {
             cb = shape_get_fill_color(b);
             return strcmp(ca, cb);
         default:
-            assert(0 && "criterio desconhecido em sort_compare");
+            assert(0 && "criterio desconhecido");
     }
     return 0;
 }
@@ -51,10 +47,6 @@ static void emit(List lst, int k, int *frame, AnimCallback anim, void *ud) {
         (*frame)++;
     }
 }
-
-/* ------------------------------------------------------------------ */
-/* Selection Sort                                                       */
-/* ------------------------------------------------------------------ */
 
 void sort_selection(List lst, int k, SortCrit crit,
                     AnimCallback anim, void *userdata) {
@@ -72,35 +64,26 @@ void sort_selection(List lst, int k, SortCrit crit,
     }
 }
 
-/* ------------------------------------------------------------------ */
-/* Bubble Sort                                                          */
-/* ------------------------------------------------------------------ */
-
 void sort_bubble(List lst, int k, SortCrit crit,
                  AnimCallback anim, void *userdata) {
     assert(lst != NULL);
     int n = list_size(lst);
     int frame = 1;
     int i, j;
-    for (i = 0; i < n - 1; i++) {
-        for (j = 0; j < n - i - 1; j++) {
-            if (sort_compare(list_get(lst, j + 1), list_get(lst, j), crit) < 0) {
-                list_swap(lst, j, j + 1);
+    for (i = 0; i < k && i < n - 1; i++) {
+        for (j = n - 1; j > i; j--) {
+            if (sort_compare(list_get(lst, j), list_get(lst, j - 1), crit) < 0) {
+                list_swap(lst, j, j - 1);
                 emit(lst, k, &frame, anim, userdata);
             }
         }
-        /* Apos i+1 passagens, os i+1 menores estao no inicio. */
-        if (i + 1 >= k) break;
     }
 }
-
-/* ------------------------------------------------------------------ */
-/* Insertion Sort                                                       */
-/* ------------------------------------------------------------------ */
 
 void sort_insertion(List lst, int k, SortCrit crit,
                     AnimCallback anim, void *userdata) {
     assert(lst != NULL);
+    (void)k;
     int n = list_size(lst);
     int frame = 1;
     int i, j;
@@ -111,14 +94,8 @@ void sort_insertion(List lst, int k, SortCrit crit,
             j--;
         }
         emit(lst, k, &frame, anim, userdata);
-        /* Apos inserir i elementos, os i menores estao ordenados no inicio. */
-        if (i >= k) break;
     }
 }
-
-/* ------------------------------------------------------------------ */
-/* Shell Sort                                                           */
-/* ------------------------------------------------------------------ */
 
 void sort_shell(List lst, int k, SortCrit crit,
                 AnimCallback anim, void *userdata) {
@@ -139,10 +116,6 @@ void sort_shell(List lst, int k, SortCrit crit,
     }
 }
 
-/* ------------------------------------------------------------------ */
-/* Quick Sort (particao de Lomuto)                                     */
-/* ------------------------------------------------------------------ */
-
 static int partition(List lst, int lo, int hi, SortCrit crit) {
     Shape pivot = list_get(lst, hi);
     int i = lo - 1, j;
@@ -161,7 +134,6 @@ static void quick_rec(List lst, int lo, int hi, int k, SortCrit crit,
     if (lo >= hi) return;
     int p = partition(lst, lo, hi, crit);
     emit(lst, k, frame, anim, ud);
-    /* Apenas recursa no lado que pode conter elementos de rank < k */
     if (p > lo) quick_rec(lst, lo, p - 1, k, crit, frame, anim, ud);
     if (p < k)  quick_rec(lst, p + 1, hi, k, crit, frame, anim, ud);
 }
@@ -174,10 +146,6 @@ void sort_quick(List lst, int k, SortCrit crit,
     if (n > 1)
         quick_rec(lst, 0, n - 1, k, crit, &frame, anim, userdata);
 }
-
-/* ------------------------------------------------------------------ */
-/* Merge Sort                                                           */
-/* ------------------------------------------------------------------ */
 
 static void merge(List lst, int lo, int mid, int hi, SortCrit crit,
                   int *frame, int k, AnimCallback anim, void *ud) {
