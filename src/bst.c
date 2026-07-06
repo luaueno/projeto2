@@ -3,19 +3,15 @@
 #include <assert.h>
 
 typedef struct BSTNode {
-    Shape           data;
+    Shape data;
     struct BSTNode *left;
     struct BSTNode *right;
 } BSTNode;
 
 typedef struct {
     BSTNode *root;
-    int      count;
+    int count;
 } BSTData;
-
-/* ------------------------------------------------------------------ */
-/* Auxiliares internas                                                  */
-/* ------------------------------------------------------------------ */
 
 static BSTNode *node_create(Shape s) {
     BSTNode *n = (BSTNode *)malloc(sizeof(BSTNode));
@@ -53,19 +49,14 @@ static void destroy_rec(BSTNode *node) {
     free(node);
 }
 
-/* Encontra o no minimo de uma subarvore (mais a esquerda). */
 static BSTNode *min_node(BSTNode *node) {
     while (node->left) node = node->left;
     return node;
 }
 
-/*
- * Remove o no com id == target_id. Como o id nao e a chave da BST,
- * percorre a arvore inteira. Retorna a nova raiz da subarvore.
- */
+/* busca por id em toda a arvore (id nao e a chave da BST) */
 static BSTNode *remove_by_id_rec(BSTNode *node, int id, int *count, int *found) {
     if (!node) return NULL;
-    /* busca em profundidade */
     node->left  = remove_by_id_rec(node->left,  id, count, found);
     node->right = remove_by_id_rec(node->right, id, count, found);
 
@@ -90,13 +81,12 @@ static BSTNode *remove_by_id_rec(BSTNode *node, int id, int *count, int *found) 
             /* dois filhos: substitui pelo sucessor in-order */
             BSTNode *succ = min_node(node->right);
             shape_destroy(node->data);
-            node->data  = succ->data;
-            /* marca o sucessor como ja encontrado para nao remover de novo */
+            node->data = succ->data;
             int dummy = 0;
             node->right = remove_by_id_rec(node->right,
                                             shape_get_id(succ->data),
                                             count, &dummy);
-            (*count)++;  /* compensar: a recursao acima decrementou */
+            (*count)++;
         }
     }
     return node;
@@ -109,10 +99,6 @@ static Shape find_by_id_rec(BSTNode *node, int id) {
     if (found) return found;
     return find_by_id_rec(node->right, id);
 }
-
-/* ------------------------------------------------------------------ */
-/* Interface publica                                                    */
-/* ------------------------------------------------------------------ */
 
 BST bst_create(void) {
     BSTData *bd = (BSTData *)malloc(sizeof(BSTData));

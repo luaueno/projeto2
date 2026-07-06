@@ -4,22 +4,13 @@
 #include <stdio.h>
 
 typedef struct {
-    FILE  *fp;
-    double width;
-    double height;
+    FILE *fp;
+    double width, height;
 } SVGFileData;
-
-/* ------------------------------------------------------------------ */
-/* Auxiliar para traversal da BST                                      */
-/* ------------------------------------------------------------------ */
 
 static void write_shape_visitor(Shape s, void *ud) {
     svg_write_shape((SVGFile)ud, s);
 }
-
-/* ------------------------------------------------------------------ */
-/* Interface publica                                                    */
-/* ------------------------------------------------------------------ */
 
 SVGFile svg_open(const char *filepath, double width, double height) {
     assert(filepath != NULL);
