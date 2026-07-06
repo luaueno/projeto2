@@ -1,0 +1,8 @@
+*.o
+*.exe
+ted
+test_shape
+test_bst
+test_list
+test_sort
+output/
