@@ -86,10 +86,40 @@ static void sel_visitor(Shape s, void *ud) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Remocao de shapes com rank > k apos find                            */
+/* Helpers de saida TXT                                                */
 /* ------------------------------------------------------------------ */
 
-typedef struct { BST bst; List work; int k; } RmCtx;
+static const char *type_str(ShapeType t) {
+    switch (t) {
+        case SHAPE_CIRCLE: return "c";
+        case SHAPE_RECT:   return "r";
+        case SHAPE_LINE:   return "l";
+        case SHAPE_TEXT:   return "t";
+        default:           return "?";
+    }
+}
+
+static void print_shape_attr(FILE *fp, Shape s, SortCrit crit) {
+    switch (crit) {
+        case CRIT_AREA:
+            fprintf(fp, "area=%.4f", shape_get_area(s));
+            break;
+        case CRIT_WIDTH:
+            fprintf(fp, "largura=%.4f", shape_get_width(s));
+            break;
+        case CRIT_HEIGHT:
+            fprintf(fp, "altura=%.4f", shape_get_height(s));
+            break;
+        case CRIT_COLOR:
+            fprintf(fp, "cor=%s", shape_get_fill_color(s));
+            break;
+        case CRIT_DEFAULT:
+            fprintf(fp, "y=%.4f x=%.4f area=%.4f",
+                    shape_get_y(s), shape_get_x(s), shape_get_area(s));
+            break;
+        default: break;
+    }
+}
 
 /* ------------------------------------------------------------------ */
 /* Nome base para arquivos de saida                                     */
@@ -97,7 +127,7 @@ typedef struct { BST bst; List work; int k; } RmCtx;
 
 /* Extrai apenas o nome do arquivo sem diretorio e sem extensao. */
 static void strip_ext(const char *name, char *out, int out_sz) {
- /* pular componentes de diretorio */
+    /* pular componentes de diretorio */
     const char *slash = strrchr(name, '/');
     if (!slash) slash = strrchr(name, '\\');
     const char *base = slash ? slash + 1 : name;
@@ -218,9 +248,9 @@ static void parse_qry(const char *path, BST bst, SVGFile main_svg,
             fprintf(txt_fp, "sel %.4f %.4f %.4f %.4f\n", x, y, w, h);
             int i;
             for (i = 0; i < list_size(selected); i++)
-                fprintf(txt_fp, "  id=%d tipo=%d\n",
+                fprintf(txt_fp, "  id=%d tipo=%s\n",
                         shape_get_id(list_get(selected, i)),
-                        (int)shape_get_type(list_get(selected, i)));
+                        type_str(shape_get_type(list_get(selected, i))));
 
         } else if (strcmp(cmd, "find") == 0 || strcmp(cmd, "findrm") == 0) {
             int k; char alg[8], crit_s[4]; double x, y, dw;
@@ -248,30 +278,52 @@ static void parse_qry(const char *path, BST bst, SVGFile main_svg,
 
             dispatch_sort(alg, work, k, crit, anim_callback, &actx);
 
-            /* reposicionar os k menores */
+            /* reposicionar os k menores clones */
             int n_work = list_size(work);
             for (i = 0; i < k && i < n_work; i++) {
                 Shape s = list_get(work, i);
                 double new_x = x + (double)i * dw;
                 shape_translate(s, new_x - shape_get_x(s),
                                     y     - shape_get_y(s));
-                /* adiciona clone reposicionado na BST */
-                bst_insert(bst, s);
             }
 
-            /* remover shapes de rank > k do BST (findrm) */
+            /* frame final: BST + k clones reposicionados com marcadores */
+            {
+                char fpath[512];
+                snprintf(fpath, sizeof(fpath), "%s/%s%06d.svg",
+                         out_dir, base_name, frame_counter++);
+                SVGFile ff = svg_open(fpath, svg_w, svg_h);
+                if (ff) {
+                    svg_write_bst(ff, bst);
+                    int j;
+                    for (j = 0; j < k && j < n_work; j++) {
+                        svg_write_shape(ff, list_get(work, j));
+                        svg_write_anchor_marker(ff, list_get(work, j));
+                    }
+                    svg_close(ff);
+                }
+            }
+
+            /* findrm: remover ORIGINAIS de rank > k da BST pelos IDs dos clones */
             if (is_findrm) {
                 for (i = k; i < n_work; i++)
                     bst_remove_by_id(bst, shape_get_id(list_get(work, i)));
             }
 
-            /* liberar clones que nao foram para a BST */
-            for (i = k; i < n_work; i++) shape_destroy(list_get(work, i));
-            list_destroy(work);
-
-            /* relatorio TXT */
+            /* relatorio TXT: comando + k shapes com atributo do criterio */
             fprintf(txt_fp, "%s %d %s %s %.4f %.4f %.4f\n",
                     cmd, k, alg, crit_s, x, y, dw);
+            for (i = 0; i < k && i < n_work; i++) {
+                Shape s = list_get(work, i);
+                fprintf(txt_fp, "  id=%d tipo=%s ",
+                        shape_get_id(s), type_str(shape_get_type(s)));
+                print_shape_attr(txt_fp, s, crit);
+                fprintf(txt_fp, "\n");
+            }
+
+            /* destruir TODOS os clones (nao vao para a BST) */
+            for (i = 0; i < n_work; i++) shape_destroy(list_get(work, i));
+            list_destroy(work);
 
         } else if (strcmp(cmd, "cm") == 0) {
             double x, y, w, h, dx, dy;
