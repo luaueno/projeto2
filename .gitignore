@@ -5,4 +5,10 @@ test_shape
 test_bst
 test_list
 test_sort
-output/
+
+# Ignorar o executável na raiz do projeto
+programa
+
+gabarito/
+test/*
+input/*
